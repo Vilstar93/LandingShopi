@@ -1,0 +1,48 @@
+name: verify
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Handlers parse
+        run: |
+          node --check api/verify.js
+          node --check api/submit.js
+          node --check api/_vies.js
+          node --check lib/affiliate.js
+          node --check public/lib/eik.js
+          node --check public/app.js
+          node --check scripts/dev-server.mjs
+
+      - name: Page has no unrendered placeholders
+        run: |
+          if grep -q '{{' public/index.html; then
+            echo "Unrendered placeholder"; exit 1
+          fi
+
+      - name: The affiliate link is not hard-coded in the page
+        run: |
+          if grep -q 'pxf\.io' public/index.html public/app.js; then
+            echo "Affiliate link must come from the environment, not the page"; exit 1
+          fi
+
+      - name: The page does not open windows or frames
+        run: |
+          # Only real code counts; a comment mentioning window.open is fine.
+          if grep -nE 'window\.open|<iframe|target="_blank"' public/app.js public/index.html \
+             | grep -vE '^\S+:[0-9]+:\s*(//|\*|<!--)'; then
+            echo "Affiliate link must be a same-tab navigation"; exit 1
+          fi

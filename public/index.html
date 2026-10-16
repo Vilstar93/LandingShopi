@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Магазин за твоята фирма — заявка</title>
+<meta name="description" content="Подай данните на фирмата си и подготвяме твоя Shopify магазин.">
+<meta name="robots" content="index,follow">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <span class="logo">Магазин за твоята фирма</span>
+    <a class="topbar-cta" href="#zayavka">Заяви сега</a>
+  </div>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">За български фирми</p>
+      <h1>Твоят онлайн магазин, готов за плащания</h1>
+      <p class="lead">
+        Подаваш данните на фирмата си. Подготвяме магазина — продукти, правни
+        страници, тема и домейн. Получаваш достъп и продаваш.
+      </p>
+      <a class="btn btn-primary" href="#zayavka">Заяви магазин</a>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="usp">
+      <div><strong>Готов за плащания</strong><span>Карта, наложен платеж и банков превод.</span></div>
+      <div><strong>Правните страници са налице</strong><span>Общи условия, поверителност, доставка, отказ.</span></div>
+      <div><strong>Твоят домейн</strong><span>Свързваме го и настройваме TLS.</span></div>
+    </div>
+  </section>
+
+  <section class="wrap block" id="zayavka">
+    <h2>Заявка</h2>
+    <p class="section-sub">
+      Попълни данните на фирмата. Проверяваме ги и се свързваме с теб.
+    </p>
+
+    <form id="form" class="card form" novalidate>
+
+      <fieldset>
+        <legend>Фирма</legend>
+
+        <label for="legalName">Наименование на фирмата *</label>
+        <input id="legalName" name="legalName" type="text" autocomplete="organization" required>
+        <p class="hint" id="legalName-hint">Както е в Търговския регистър.</p>
+
+        <label for="eik">ЕИК / БУЛСТАТ *</label>
+        <input id="eik" name="eik" type="text" inputmode="numeric" autocomplete="off" required>
+        <p class="hint" id="eik-hint">9 цифри (или 13 за клон). Проверяваме го веднага.</p>
+        <p class="field-msg" id="eik-msg" role="status" aria-live="polite"></p>
+
+        <label for="vatId">ДДС номер</label>
+        <input id="vatId" name="vatId" type="text" autocomplete="off" placeholder="BG">
+        <p class="hint" id="vatId-hint">Ако фирмата е регистрирана по ДДС. Остави празно, ако не е.</p>
+        <p class="field-msg" id="vatId-msg" role="status" aria-live="polite"></p>
+
+        <label for="address">Адрес на управление</label>
+        <input id="address" name="address" type="text" autocomplete="street-address">
+      </fieldset>
+
+      <fieldset>
+        <legend>Контакт</legend>
+
+        <label for="contactName">Твоето име *</label>
+        <input id="contactName" name="contactName" type="text" autocomplete="name" required>
+
+        <label for="email">Имейл *</label>
+        <input id="email" name="email" type="email" autocomplete="email" required>
+
+        <label for="phone">Телефон</label>
+        <input id="phone" name="phone" type="tel" autocomplete="tel">
+      </fieldset>
+
+      <fieldset>
+        <legend>Магазин</legend>
+
+        <label for="niche">Какво ще продаваш? *</label>
+        <input id="niche" name="niche" type="text" required>
+
+        <label for="domain">Желан домейн</label>
+        <input id="domain" name="domain" type="text" placeholder="primer.com">
+        <p class="hint">Ако още не си го купил, ще помогнем с избора.</p>
+      </fieldset>
+
+      <label class="check">
+        <input id="consent" name="consent" type="checkbox" required>
+        <span>
+          Съгласен съм данните на фирмата ми да бъдат обработени, за да бъде
+          подготвен магазинът. Данните са публични в Търговския регистър.
+        </span>
+      </label>
+
+      <p class="form-error" id="form-error" role="alert" hidden></p>
+
+      <button class="btn btn-primary" type="submit" id="submit">Изпрати заявката</button>
+    </form>
+  </section>
+
+  <section class="wrap block" id="shopify">
+    <h2>След заявката</h2>
+    <p class="section-sub">
+      Когато данните са проверени, следващата стъпка е да отвориш своя Shopify
+      акаунт. Това става с ясен бутон по-долу — нищо не се отваря автоматично.
+    </p>
+
+    <!-- The affiliate link is only activated by a real click here, after the
+         form has been submitted. No popup, no new tab, no iframe. -->
+    <div class="card shopify-box">
+      <p class="disclosure" id="disclosure">
+        <strong>Разкриване:</strong> Аз съм Shopify афилейт и мога да получа
+        комисионна, ако създадеш магазин през линка по-долу. Това не променя
+        цената за теб.
+      </p>
+      <button class="btn btn-secondary" type="button" id="shopify-btn" disabled>
+        Отвори Shopify и създай магазина
+      </button>
+      <p class="hint" id="shopify-hint">
+        Бутонът се активира, след като изпратиш заявката.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap footer">
+  <p>Заявките се обработват ръчно. Не сме свързани със Shopify по трудово правоотношение.</p>
+</footer>
+
+<script src="/app.js" type="module"></script>
+</body>
+</html>
