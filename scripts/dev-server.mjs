@@ -113,9 +113,25 @@ async function handleApi(req, res) {
 
 await loadEnv();
 
-createServer(async (req, res) => {
+const server = createServer(async (req, res) => {
     if (req.url.startsWith('/api/')) return handleApi(req, res);
     return serveStatic(req, res);
 }).listen(PORT, () => {
     console.log(`dev server: http://localhost:${PORT}`);
+});
+
+// A busy port is the most likely first failure when running locally. A raw
+// stack trace sends people looking for a bug in the code instead of at the
+// port, so say what is wrong and how to change it.
+server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} is already in use.`);
+        console.error(`Try another one:  node scripts/dev-server.mjs ${PORT + 1}`);
+        process.exit(1);
+    }
+    if (error.code === 'EACCES') {
+        console.error(`Port ${PORT} needs administrator rights. Pick one above 1024.`);
+        process.exit(1);
+    }
+    throw error;
 });
