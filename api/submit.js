@@ -10,6 +10,8 @@
 
 import { partnerUrlFor, isPartnerConfigured, affiliateConfig } from '../lib/affiliate.js';
 import { isValidEik, normalizeVatId, digitsOnly } from '../public/lib/eik.js';
+import { recordRequest } from '../lib/store.js';
+import { notifyAgent } from '../lib/openclaw.js';
 
 const RATE_LIMIT = { limit: 10, windowMs: 60_000 };
 const hits = new Map();
@@ -79,7 +81,7 @@ export function makeClickId() {
 }
 
 /** Forward the request to the operator's intake, when configured. */
-async function forward(data, clickId, options = {}) {
+export async function forward(data, clickId, options = {}) {
     const { fetchImpl = fetch } = options;
     const url = process.env.REQUEST_WEBHOOK_URL;
     if (!url) return { forwarded: false, reason: 'NOT_CONFIGURED' };
@@ -93,6 +95,21 @@ async function forward(data, clickId, options = {}) {
     } catch {
         return { forwarded: false, reason: 'NETWORK' };
     }
+}
+
+/**
+ * Keep the request somewhere durable and hand it to the agent.
+ *
+ * All three paths run and none is allowed to fail the visitor's request: the
+ * response is a record of what happened, not a gate. A lost intake is an
+ * operational problem, not a reason to tell the visitor their valid request
+ * was rejected.
+ */
+export async function persist(data, clickId, options = {}) {
+    const stored = recordRequest(data, clickId, options);
+    const forwarded = await forward(data, clickId, options);
+    const agent = await notifyAgent(data, clickId, options);
+    return { stored, forwarded, agent };
 }
 
 export default async function handler(req, res) {
@@ -119,7 +136,7 @@ export default async function handler(req, res) {
     }
 
     const clickId = makeClickId();
-    await forward(data, clickId);
+    const intake = await persist(data, clickId);
 
     // A partner link is only offered when a real https deeplink is configured.
     // The link comes from config/affiliate.json, overridden by the environment.
@@ -129,6 +146,9 @@ export default async function handler(req, res) {
         code: 'ACCEPTED',
         clickId,
         partnerUrl,
+        stored: intake.stored.stored,
+        forwarded: intake.forwarded.forwarded,
+        agent: intake.agent.delivered,
         message: 'Заявката е приета.',
     });
 }

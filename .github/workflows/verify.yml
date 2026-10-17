@@ -23,9 +23,46 @@ jobs:
           node --check api/submit.js
           node --check api/_vies.js
           node --check lib/affiliate.js
+          node --check lib/store.js
+          node --check lib/openclaw.js
           node --check public/lib/eik.js
           node --check public/app.js
           node --check scripts/dev-server.mjs
+          node --check scripts/requests.mjs
+
+      - name: Client data is never committed
+        run: |
+          # data/ holds submitted firm details and is gitignored. If it is ever
+          # tracked, the guard has been defeated.
+          if git ls-files --error-unmatch data/requests.jsonl >/dev/null 2>&1; then
+            echo "Submitted client data is tracked by git"; exit 1
+          fi
+          if ! grep -q '^data/$' .gitignore; then
+            echo "data/ is missing from .gitignore"; exit 1
+          fi
+          echo "data/ is untracked and ignored"
+
+      - name: No secrets are committed
+        run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo ".env is tracked by git"; exit 1
+          fi
+          echo ".env is untracked"
+
+      - name: The agent bridge sends no unauthenticated traffic
+        run: |
+          # A URL without a token must not enable the bridge.
+          node -e "
+            delete process.env.OPENCLAW_TOKEN;
+            process.env.OPENCLAW_URL = 'http://agent.local';
+            import('./lib/openclaw.js').then(({ openclawConfig }) => {
+              if (openclawConfig().enabled) {
+                console.error('Bridge enabled without a token');
+                process.exit(1);
+              }
+              console.log('Bridge requires both URL and token');
+            });
+          "
 
       - name: Page has no unrendered placeholders
         run: |
