@@ -1,0 +1,5 @@
+{
+  "_comment": "Partner link for the Shopify affiliate account (Impact.com). Not a secret: affiliate links are public by nature. The environment variable SHOPIFY_AFFILIATE_URL overrides this value when set, so a deployment can be repointed without a code change.",
+  "partnerUrl": "https://shopify.pxf.io/7950557-link?sharedid=7950557",
+  "subIdParam": "subId1"
+}

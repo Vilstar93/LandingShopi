@@ -8,7 +8,7 @@
 // it. It is appended to a separate sub-ID parameter; the operator's own
 // sharedid is preserved (see lib/affiliate.js).
 
-import { buildPartnerUrl, isPartnerConfigured } from '../lib/affiliate.js';
+import { partnerUrlFor, isPartnerConfigured, affiliateConfig } from '../lib/affiliate.js';
 import { isValidEik, normalizeVatId, digitsOnly } from '../public/lib/eik.js';
 
 const RATE_LIMIT = { limit: 10, windowMs: 60_000 };
@@ -122,8 +122,8 @@ export default async function handler(req, res) {
     await forward(data, clickId);
 
     // A partner link is only offered when a real https deeplink is configured.
-    const deeplink = process.env.SHOPIFY_AFFILIATE_URL;
-    const partnerUrl = isPartnerConfigured(deeplink) ? buildPartnerUrl(deeplink, clickId) : null;
+    // The link comes from config/affiliate.json, overridden by the environment.
+    const partnerUrl = partnerUrlFor(clickId);
 
     return res.status(200).json({
         code: 'ACCEPTED',

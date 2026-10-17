@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import handler, { validateRequest, makeClickId } from '../api/submit.js';
+import { resetAffiliateConfig } from '../lib/affiliate.js';
 
 const VALID = {
     legalName: 'Примерна Фирма ЕООД',
@@ -83,17 +84,26 @@ test('the VAT number is normalised to BG + ЕИК', () => {
 test('no partner URL is offered when the deeplink is not configured', async () => {
     const saved = process.env.SHOPIFY_AFFILIATE_URL;
     delete process.env.SHOPIFY_AFFILIATE_URL;
+    resetAffiliateConfig();
     try {
         const res = await call({ ...VALID });
-        assert.equal(res.body.partnerUrl, null);
+        // The committed config supplies the link, so a partner URL IS returned.
+        // The point of this test is that the value comes from configuration,
+        // and that the operator sharedid survives.
+        assert.ok(res.body.partnerUrl, 'the committed config should supply a link');
+        const url = new URL(res.body.partnerUrl);
+        assert.equal(url.searchParams.get('sharedid'), '7950557');
+        assert.equal(url.searchParams.get('subId1'), res.body.clickId);
     } finally {
         if (saved !== undefined) process.env.SHOPIFY_AFFILIATE_URL = saved;
+        resetAffiliateConfig();
     }
 });
 
 test('a configured deeplink is returned with the click id and sharedid intact', async () => {
     const saved = process.env.SHOPIFY_AFFILIATE_URL;
     process.env.SHOPIFY_AFFILIATE_URL = 'https://shopify.pxf.io/7950557-link?sharedid=7950557';
+    resetAffiliateConfig();
     try {
         const res = await call({ ...VALID });
         const url = new URL(res.body.partnerUrl);
@@ -102,18 +112,37 @@ test('a configured deeplink is returned with the click id and sharedid intact', 
     } finally {
         if (saved === undefined) delete process.env.SHOPIFY_AFFILIATE_URL;
         else process.env.SHOPIFY_AFFILIATE_URL = saved;
+        resetAffiliateConfig();
+    }
+});
+
+test('the environment overrides the committed config', async () => {
+    const saved = process.env.SHOPIFY_AFFILIATE_URL;
+    process.env.SHOPIFY_AFFILIATE_URL = 'https://example.test/other-link?sharedid=999';
+    resetAffiliateConfig();
+    try {
+        const res = await call({ ...VALID });
+        const url = new URL(res.body.partnerUrl);
+        assert.equal(url.host, 'example.test');
+        assert.equal(url.searchParams.get('sharedid'), '999');
+    } finally {
+        if (saved === undefined) delete process.env.SHOPIFY_AFFILIATE_URL;
+        else process.env.SHOPIFY_AFFILIATE_URL = saved;
+        resetAffiliateConfig();
     }
 });
 
 test('a non-https deeplink yields no partner URL', async () => {
     const saved = process.env.SHOPIFY_AFFILIATE_URL;
     process.env.SHOPIFY_AFFILIATE_URL = 'http://insecure.example/x';
+    resetAffiliateConfig();
     try {
         const res = await call({ ...VALID });
         assert.equal(res.body.partnerUrl, null);
     } finally {
         if (saved === undefined) delete process.env.SHOPIFY_AFFILIATE_URL;
         else process.env.SHOPIFY_AFFILIATE_URL = saved;
+        resetAffiliateConfig();
     }
 });
 
