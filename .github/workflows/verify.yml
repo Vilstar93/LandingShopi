@@ -39,6 +39,45 @@ jobs:
           node --check scripts/dev-server.mjs
           node --check scripts/requests.mjs
 
+      - name: Env vars and code agree
+        run: |
+          # Every variable the code reads must be documented in .env.example, so
+          # an operator can find out what to set. Commented-out lines count:
+          # they document an optional override. PORT and VERCEL are supplied by
+          # the platform and are listed as known exceptions.
+          fail=0
+          for key in $(grep -rho "process\.env\.[A-Z_][A-Z0-9_]*" api/ lib/ scripts/ \
+                       --include=*.js --include=*.mjs 2>/dev/null \
+                       | sed 's/process\.env\.//' | sort -u); do
+            case "$key" in PORT|VERCEL) continue ;; esac
+            if ! grep -qE "^#? *$key=" .env.example; then
+              echo "Read by the code but not documented in .env.example: $key"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Rate limiting cannot be bypassed by a spoofed header
+        run: |
+          # X-Forwarded-For is caller-controlled. Trusting it unconditionally
+          # let one attacker send unlimited requests by rotating it. This asserts
+          # the default (no trusted proxy) keys on the socket address instead.
+          node --input-type=module -e "
+            import handler from './api/submit.js';
+            process.env.REQUEST_LOG_DIR = '/tmp/ci-rl';
+            const body = { legalName: 'Т', eik: '104532902', contactName: 'Иван Иванов',
+                           email: 'a@b.bg', niche: 'x', consent: true };
+            const socket = { remoteAddress: '203.0.113.250' };
+            let limited = 0;
+            for (let i = 0; i < 20; i++) {
+              const res = { statusCode: 200, setHeader(){}, status(c){ this.statusCode=c; return this; }, json(){ return this; } };
+              await handler({ method: 'POST', body, headers: { 'x-forwarded-for': '10.0.0.'+i }, socket }, res);
+              if (res.statusCode === 429) limited++;
+            }
+            if (limited === 0) { console.error('A spoofed X-Forwarded-For bypassed the rate limit'); process.exit(1); }
+            console.log('spoofed header blocked ' + limited + '/20 requests');
+          "
+
       - name: Client data is never committed
         run: |
           # data/ holds submitted firm details and is gitignored. If it is ever

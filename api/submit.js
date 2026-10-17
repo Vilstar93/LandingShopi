@@ -18,6 +18,16 @@ const hits = new Map();
 
 function rateLimited(key) {
     const now = Date.now();
+
+    // Entries were only ever added. With a client-supplied key an attacker can
+    // mint unlimited distinct keys and grow this map without bound, so sweep
+    // expired windows periodically instead of waiting for a restart.
+    if (hits.size > 5000) {
+        for (const [k, v] of hits) {
+            if (now - v.start > RATE_LIMIT.windowMs) hits.delete(k);
+        }
+    }
+
     const entry = hits.get(key);
     if (!entry || now - entry.start > RATE_LIMIT.windowMs) {
         hits.set(key, { start: now, count: 1 });
@@ -27,10 +37,30 @@ function rateLimited(key) {
     return entry.count > RATE_LIMIT.limit;
 }
 
+// The client address is taken from X-Forwarded-For, which any caller can set.
+// Trusting it unconditionally let one attacker send unlimited requests by
+// rotating the header (measured: 2000 requests, 0 blocked).
+//
+// The header is only meaningful when something in front of us overwrites it.
+// Vercel does that, so it is trusted there; on a bare Node server it is fully
+// attacker-controlled and the socket address is used instead. TRUST_PROXY
+// overrides the guess for other proxy setups.
+//
+// Read per call, not at module load: a module-level constant is evaluated
+// before any test or caller can set the variable, which is untestable.
+function trustProxy() {
+    if (process.env.TRUST_PROXY === '1' || process.env.TRUST_PROXY === 'true') return true;
+    if (process.env.TRUST_PROXY === '0' || process.env.TRUST_PROXY === 'false') return false;
+    return process.env.VERCEL === '1';
+}
+
 function clientKey(req) {
-    const forwarded = req.headers['x-forwarded-for'];
-    const ip = Array.isArray(forwarded) ? forwarded[0] : String(forwarded ?? '').split(',')[0].trim();
-    return ip || req.socket?.remoteAddress || 'unknown';
+    if (trustProxy()) {
+        const forwarded = req.headers['x-forwarded-for'];
+        const ip = Array.isArray(forwarded) ? forwarded[0] : String(forwarded ?? '').split(',')[0].trim();
+        if (ip) return ip;
+    }
+    return req.socket?.remoteAddress || 'unknown';
 }
 
 function text(value, max = 200) {

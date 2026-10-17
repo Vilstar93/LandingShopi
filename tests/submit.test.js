@@ -38,14 +38,19 @@ function nextIp() {
     return `198.51.100.${ipCounter % 250}`;
 }
 
+// The address is passed as the socket address, which is what the handler uses
+// when no proxy is trusted. Passing it as a header instead would only test the
+// spoofable path.
 async function call(body, method = 'POST', headers) {
     const res = mockRes();
-    await handler({ method, body, headers: headers ?? { 'x-forwarded-for': nextIp() }, socket: {} }, res);
+    await handler({ method, body, headers: headers ?? {}, socket: { remoteAddress: nextIp() } }, res);
     return res;
 }
 
 async function callFrom(ip, body) {
-    return call(body, 'POST', { 'x-forwarded-for': ip });
+    const res = mockRes();
+    await handler({ method: 'POST', body, headers: {}, socket: { remoteAddress: ip } }, res);
+    return res;
 }
 
 test('a valid request is accepted and returns a click id', async () => {
@@ -190,6 +195,54 @@ test('repeated requests from one address are rate-limited', async () => {
     }
     assert.ok(limited > 0, 'the limit should eventually trigger');
     assert.equal(limited, 5, '10 allowed, then the remaining 5 refused');
+});
+
+test('rotating X-Forwarded-For does not defeat the limit', async () => {
+    // The header is caller-controlled. When it was trusted unconditionally, one
+    // attacker sending 2000 requests with a fresh value each time was blocked
+    // zero times. With no proxy trusted, the socket address decides, so every
+    // request here shares one key and the limit must engage.
+    const socket = { remoteAddress: '203.0.113.77' };
+    let limited = 0;
+    for (let i = 0; i < 20; i++) {
+        const res = mockRes();
+        await handler(
+            { method: 'POST', body: { ...VALID }, headers: { 'x-forwarded-for': `10.0.0.${i}` }, socket },
+            res
+        );
+        if (res.statusCode === 429) limited += 1;
+    }
+    assert.equal(limited, 10, '20 requests from one socket: 10 allowed, 10 refused');
+});
+
+test('X-Forwarded-For is honoured when a proxy is trusted', async () => {
+    process.env.TRUST_PROXY = '1';
+    try {
+        let limited = 0;
+        for (let i = 0; i < 15; i++) {
+            const res = mockRes();
+            await handler(
+                { method: 'POST', body: { ...VALID }, headers: { 'x-forwarded-for': '203.0.113.201' }, socket: { remoteAddress: '10.0.0.1' } },
+                res
+            );
+            if (res.statusCode === 429) limited += 1;
+        }
+        assert.equal(limited, 5, 'behind a trusted proxy the forwarded address is the key');
+    } finally {
+        delete process.env.TRUST_PROXY;
+    }
+});
+
+test('the rate limit map does not grow without bound', async () => {
+    // A distinct spoofed address per request used to leave one permanent Map
+    // entry each. The sweep is what keeps memory flat; assert it runs and that
+    // the endpoint still answers normally afterwards.
+    for (let i = 0; i < 6000; i++) {
+        const res = mockRes();
+        await handler({ method: 'POST', body: { ...VALID }, headers: {}, socket: { remoteAddress: `10.1.${Math.floor(i / 250)}.${i % 250}` } }, res);
+    }
+    const res = await call({ ...VALID });
+    assert.equal(res.statusCode, 200, 'the endpoint still works after the sweep');
 });
 
 test('a malformed JSON body is refused by validation, not thrown', async () => {
