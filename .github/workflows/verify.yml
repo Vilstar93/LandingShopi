@@ -17,6 +17,15 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Tests do not write to the real request log
+        run: |
+          # The suite drives the real handler. If it ever writes to data/, it
+          # mixes invented firms into the operator's client list.
+          if [ -e data/requests.jsonl ]; then
+            echo "The test suite wrote to the real request log"; exit 1
+          fi
+          echo "The request log was not touched by the suite"
+
       - name: Handlers parse
         run: |
           node --check api/verify.js

@@ -15,6 +15,30 @@
 | Агент | сървър | OpenClaw започва обработката |
 | Shopify | браузър | Бутон, само след заявка, само при клик |
 
+## Как се пуска
+
+Изисква се само **Node 20 или по-нов**. Няма зависимости, няма `npm install`.
+
+```bash
+git clone https://github.com/Vilstar93/LandingShopi.git
+cd LandingShopi
+npm test          # 81 теста
+npm start         # http://localhost:3000
+```
+
+`npm start` и `npm run dev` са едно и също — локалният сървър, без Vercel CLI.
+Друг порт: `node scripts/dev-server.mjs 4000`.
+
+| Команда | Какво прави |
+|---|---|
+| `npm test` | пуска тестовете |
+| `npm start` | вдига страницата на порт 3000 |
+| `npm run requests` | показва записаните заявки |
+| `npm run deploy` | качва в Vercel (иска Vercel CLI) |
+
+`npm run deploy` е единственото, което иска Vercel. Всичко останало работи
+офлайн.
+
 ## Къде отиват заявките
 
 Три пътя, всичките по избор, нито един не може да провали заявката:

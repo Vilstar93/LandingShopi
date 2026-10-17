@@ -1,7 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import handler, { validateRequest, makeClickId } from '../api/submit.js';
 import { resetAffiliateConfig } from '../lib/affiliate.js';
+
+// These tests exercise the real handler, which records every accepted request.
+// Without this the suite would append its fixtures to data/requests.jsonl and
+// mix invented firms into the operator's real client list. Point the log at a
+// throwaway directory before the handler is ever called.
+process.env.REQUEST_LOG_DIR = mkdtempSync(join(tmpdir(), 'ls-submit-'));
 
 const VALID = {
     legalName: 'Примерна Фирма ЕООД',
