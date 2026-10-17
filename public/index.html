@@ -7,6 +7,24 @@
 <meta name="description" content="Подай данните на фирмата си и подготвяме твоя Shopify магазин.">
 <meta name="robots" content="index,follow">
 <link rel="stylesheet" href="/style.css">
+<script>
+// Opened by double-clicking, this page loads from the file system. Then
+// /app.js, /style.css and /api/* all resolve to nonexistent file paths, so
+// nothing works and the only clue is a bare network error. Module scripts are
+// blocked in that mode, so this must stay a classic script and carry its own
+// styling.
+if (location.protocol === 'file:') {
+  document.addEventListener('DOMContentLoaded', function () {
+    var box = document.createElement('div');
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'position:fixed;inset:0 0 auto 0;z-index:9999;padding:16px 20px;' +
+      'background:#7f1d1d;color:#fff;font:16px/1.5 system-ui,sans-serif;text-align:center';
+    box.textContent = 'Страницата е отворена като файл и така не може да работи. ' +
+      'Пусни "npm start" в папката и отвори http://localhost:3000';
+    document.body.insertBefore(box, document.body.firstChild);
+  });
+}
+</script>
 </head>
 <body>
 

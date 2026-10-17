@@ -30,6 +30,16 @@ function setInvalid(input, invalid) {
     input.setAttribute('aria-invalid', invalid ? 'true' : 'false');
 }
 
+// A browser reports an unreachable server as a bare "Failed to fetch", which
+// reads like a bug in the page. It almost always means the server is not
+// running, and the visitor can fix that once it is named.
+function describeNetworkError(error) {
+    if (error instanceof TypeError || /failed to fetch|networkerror|load failed/i.test(error.message)) {
+        return 'Няма връзка със сървъра. Провери дали "npm start" работи, и презареди страницата.';
+    }
+    return error.message;
+}
+
 // --- ЕИК: instant, offline, no network round trip -------------------------
 
 function checkEik() {
@@ -164,7 +174,7 @@ form.addEventListener('submit', async (event) => {
         ok.textContent = 'Заявката е приета. Ще се свържем с теб.';
         form.appendChild(ok);
     } catch (error) {
-        formError.textContent = error.message;
+        formError.textContent = describeNetworkError(error);
         formError.hidden = false;
         submitBtn.disabled = false;
         submitBtn.textContent = 'Изпрати заявката';
