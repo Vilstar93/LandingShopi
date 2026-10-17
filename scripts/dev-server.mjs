@@ -8,7 +8,7 @@
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const PUBLIC_DIR = join(ROOT, 'public');
@@ -95,7 +95,9 @@ async function handleApi(req, res) {
         return;
     }
     try {
-        const module = await import(join(ROOT, 'api', `${name}.js`));
+        // import() takes a URL, not a filesystem path. On Windows join() yields
+        // "C:\...", which the ESM loader rejects as an unknown protocol.
+        const module = await import(pathToFileURL(join(ROOT, 'api', `${name}.js`)).href);
         const body = await readBody(req);
         const fakeReq = {
             method: req.method,
